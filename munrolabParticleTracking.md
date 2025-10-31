@@ -1,5 +1,7 @@
 ## Munro Lab Particle Tracking
-The particle tracking algorithm that we use is μTrack, which was developed by the Danuser Lab (citation). Ed has made a MATLAB app/GUI for μTrack that we use for tracking and basic analysis and plots.
+The particle tracking algorithm that we use is μTrack, which was developed by the Danuser Lab (citation). Ed has made a MATLAB app/GUI for μTrack that we use for tracking and basic analysis and plots.  
+
+This repo contains this MATLAB app and scripts that I have written for further analysis.
 
 ***-------------------------------------------------------------------------------------------------------------------***
 
