@@ -1,0 +1,157 @@
+function plotCumDVSTau(axes,trks,info, sgWindowSize, montage, plotMode)
+
+%  plotCumDVSTau:  Takes a an array of trajectories in simple format. Uses the getCumDvsTAU functiuon to 
+%  compute cumulative distances along smoothed version of each trajectory,
+%  then plots the cumulative displacements for all trajectories overlaid in
+%  a single plot or as a montage of individual plots
+
+
+
+% Inputs:
+
+% axes  = the axes on which to plot
+
+% trks = a list of particle tracks which is assumed to be in the format 
+% output by the function uTrackToSimpleTraj:
+%
+%   'first' =   the first movie frame in which this track appears
+%   'last' =    the last movie frame in which this track appears.
+%   'lifetime' = the length of the track in frames.
+%   'x' = an array containing the sequence of x positions.
+%   'y' = an array containing the sequence of y positions.
+%   'I' = an array containing the intensity values.
+
+
+% movieInfo         =   a struct containing the following fields:
+%     
+%     baseName:       original datafile name minus the ".tif" ext
+%     frameRate:      in #/sec
+%     pixelSize:      in µm
+%     firstFrame      first frame of movie segment 
+%     length:         length of movie segment in frames
+%     APOrientation:  0 if anterior is to the left; 1 if it is to the right 
+% 
+% sgWindowSize      =   size of the smoothing window used by the SavitskyGolay filter
+%
+% montage           =   a flag that determines whether to plot the curves
+%                       as a montage or as a single overlaid plot
+%
+% plotMode = 'selected', 'all' or 'mean/pooled'
+
+    if montage 
+
+        maxLifetime = max([trks.lifetime]);
+        numTracks = size(trks,2)
+        X = 1:maxLifetime;
+        frameInterval = 1/info.frameRate;
+        X=X*frameInterval;   
+    
+        for i=1:numTracks
+            cumD = getCumDvsTAU(trks(i),info,sgWindowSize);
+            plot(axes{i},X(1:size(cumD,2)),cumD);
+            xlim(axes{i},[0,frameInterval*maxLifetime]);
+            ylim(axes{i},[0,10]);
+            char=num2str(i);
+            title(axes{i},char);
+        end
+    else  % plot overlayed curves
+
+        switch plotMode
+
+            case 'selected'
+
+                maxLifetime = max([trks.lifetime]);
+                numTracks = size(trks,2);
+                X = 1:maxLifetime;
+                frameInterval = 1/info.frameRate;
+                X=X*frameInterval;    
+
+                xlim(axes,[0,frameInterval*maxLifetime]);
+                ylim(axes,[0,10]);
+                hold(axes,'on');
+                for i=1:numTracks
+                    cumD = getCumDvsTAU(trks(i),info,sgWindowSize);
+                    plot(axes,X(1:size(cumD,2)),cumD);
+                end
+
+            
+ 
+            case {'all','mean/pooled'}
+                % determine number of samples and parameter values
+                numSamples = size(trks,1);
+                numParameters = size(trks,2);
+    
+                % determine max trajectory length  %
+                maxLifetime = 1;
+                for i = 1:numSamples
+                    for j = 1:numParameters
+                        maxLifetime = max(maxLifetime, max([trks{i,j}.lifetime]));
+                    end
+                end
+                X = 1:maxLifetime;
+                frameInterval = 1/info.frameRate;
+                X=X*frameInterval;    
+
+            if isequal(plotMode,'all')
+
+                % plot
+                for j = 1:numParameters
+
+                    hold(axes{j},'on');
+                    
+                    for i = 1:numSamples
+
+                        numTracks = size(trks{i,j},2);
+
+                        xlim(axes{i,j},[0,frameInterval*maxLifetime]);
+                        ylim(axes{i,j},[0,10]);
+                        hold(axes{i,j},'on');
+                        for k=1:numTracks
+                            cumD = getCumDvsTAU(trks{i,j}(k),info,sgWindowSize);
+                            plot(axes{i,j},X(1:size(cumD,2)),cumD);
+                        end
+                    end
+                end
+            else   % plot mean/pooled
+
+                % plot
+                for j = 1:numParameters                          
+                    hold(axes{j},'on');
+                    loglog(axes{i,j},X,4*0.1*X,'color','b');        
+                    hold(axes{i,j},'on');
+                    loglog(axes{i,j},X,4*0.1*X.^2,'color','r');   
+
+                    for i = 1:numSamples
+                        numTracks = size(trks{i,j},2);
+                        MSDCurves = NaN(numTracks,maxLifetime);
+                        if logscale
+                            for k=1:numTracks  
+                                msd = getMSDvsTAU(trks{i,j}(k),trks{i,j}(k).lifetime,info);
+                                MSDCurves(k,1:1:size(msd,2)) = msd;
+                                loglog(axes{j},X(1:size(msd,2)),msd);
+                            end
+                            loglog(axes{j},X,mean(MSDCurves,'omitnan'));
+                            xlim(axes{j},[frameInterval,frameInterval*maxLifetime]);
+                            ylim(axes{j},[0.001,10]);
+                        else
+                            plot(axes{i,j},X,4*0.1*X,'color','b');        
+                            hold(axes{i,j},'on');
+                            plot(X,4*0.1*X.^2,'color','r');   
+                            for i=1:numTracks  
+                                msd = getMSDvsTAU(ttrks{i,j}(k),trks{i,j}(k).lifetime,info);
+                                MSDCurves(k,1:1:size(msd,2)) = msd;
+                                plot(axes{i,j},X(1:size(msd,2)),msd);
+                            end
+                            plot(axes{i,j},X,mean(MSDCurves,'omitnan'));
+                            xlim(axes,[frameInterval,frameInterval*maxLifetime]);
+                            ylim(axes,[0,5]);
+                        end     
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+
